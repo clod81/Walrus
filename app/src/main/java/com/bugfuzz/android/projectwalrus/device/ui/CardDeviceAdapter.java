@@ -39,12 +39,12 @@ import java.util.List;
 public class CardDeviceAdapter extends RecyclerView.Adapter<CardDeviceAdapter.ViewHolder> {
 
     private final Class<? extends CardData> cardDataFilterClass;
-    private final FilterMode cardDataFilterMode;
+    private final CardDataFilterMode cardDataFilterMode;
     private final OnCardDeviceClickCallback onCardDeviceClickCallback;
     private final int startEndPadding;
 
-    private CardDeviceAdapter(Class<? extends CardData> cardDataFilterClass,
-            FilterMode cardDataFilterMode,
+    CardDeviceAdapter(Class<? extends CardData> cardDataFilterClass,
+            CardDataFilterMode cardDataFilterMode,
             OnCardDeviceClickCallback onCardDeviceClickCallback, int startEndPadding) {
         this.cardDataFilterClass = cardDataFilterClass;
         this.cardDataFilterMode = cardDataFilterMode;
@@ -52,7 +52,8 @@ public class CardDeviceAdapter extends RecyclerView.Adapter<CardDeviceAdapter.Vi
         this.startEndPadding = startEndPadding;
     }
 
-    CardDeviceAdapter(Class<? extends CardData> cardDataFilterClass, FilterMode cardDataFilterMode,
+    CardDeviceAdapter(Class<? extends CardData> cardDataFilterClass,
+            CardDataFilterMode cardDataFilterMode,
             OnCardDeviceClickCallback onCardDeviceClickCallback) {
         this(cardDataFilterClass, cardDataFilterMode, onCardDeviceClickCallback, 0);
     }
@@ -88,10 +89,6 @@ public class CardDeviceAdapter extends RecyclerView.Adapter<CardDeviceAdapter.Vi
     }
 
     private List<CardDevice> getFilteredCardDevices() {
-        if (cardDataFilterClass == null) {
-            return new ArrayList<>(CardDeviceManager.INSTANCE.getCardDevices().values());
-        }
-
         List<CardDevice> cardDevices = new ArrayList<>();
         for (CardDevice cardDevice : CardDeviceManager.INSTANCE.getCardDevices().values()) {
             CardDevice.Metadata metadata = cardDevice.getClass().getAnnotation(
@@ -112,7 +109,8 @@ public class CardDeviceAdapter extends RecyclerView.Adapter<CardDeviceAdapter.Vi
                     break;
             }
 
-            if (Arrays.asList(array).contains(cardDataFilterClass)) {
+            if (cardDataFilterClass != null
+                    ? Arrays.asList(array).contains(cardDataFilterClass) : array.length > 0) {
                 cardDevices.add(cardDevice);
             }
         }
@@ -133,7 +131,7 @@ public class CardDeviceAdapter extends RecyclerView.Adapter<CardDeviceAdapter.Vi
         return cardDevices;
     }
 
-    public enum FilterMode {
+    public enum CardDataFilterMode {
         READABLE,
         WRITABLE,
         EMULATABLE
