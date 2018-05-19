@@ -19,40 +19,45 @@
 
 package com.bugfuzz.android.projectwalrus.card.carddata;
 
+import android.content.Context;
 import android.support.annotation.IntRange;
+import android.support.annotation.LayoutRes;
+import android.support.annotation.NonNull;
 import android.support.annotation.Size;
 
 import com.bugfuzz.android.projectwalrus.R;
+import com.bugfuzz.android.projectwalrus.util.MiscUtils;
+import com.google.common.io.BaseEncoding;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
+import java.io.Serializable;
 import java.math.BigInteger;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
+// TODO XXX: check all checks made on all constructors here
 @CardData.Metadata(
         name = "MIFARE",
         iconId = R.drawable.drawable_mifare
 )
 public class MifareCardData extends ISO14443ACardData {
 
-    public final Map<Integer, Sector> sectors;
-    public int maxSector;
+    public final Map<SectorNumber, Sector> sectors;
+    public SectorNumber maxSector;
 
     public MifareCardData() {
         sectors = new HashMap<>();
-        maxSector = 0;
+        maxSector = new SectorNumber(0);
     }
 
     public MifareCardData(short atqa, BigInteger uid, byte sak, byte[] ats,
-            Map<Integer, Sector> sectors, @IntRange(from = 0) int maxSector) {
+            Map<SectorNumber, Sector> sectors, SectorNumber maxSector) {
         super(atqa, uid, sak, ats);
-
-        if (maxSector < 0) {
-            throw new IllegalArgumentException("Invalid maximum sector number");
-        }
 
         this.sectors = sectors;
         this.maxSector = maxSector;
@@ -61,7 +66,7 @@ public class MifareCardData extends ISO14443ACardData {
     @SuppressWarnings("unused")
     public static MifareCardData newDebugInstance() {
         return new MifareCardData((short) 0x0004, new BigInteger(32, new Random()), (byte) 0x08,
-                new byte[]{}, null, 0);
+                new byte[]{}, null, new SectorNumber(0));
     }
 
     @Override
@@ -90,6 +95,20 @@ public class MifareCardData extends ISO14443ACardData {
                 .toHashCode();
     }
 
+    public enum KeySlot {
+        A,
+        B,
+        BOTH;
+
+        public boolean hasSlotA() {
+            return this == A || this == BOTH;
+        }
+
+        public boolean hasSlotB() {
+            return this == B || this == BOTH;
+        }
+    }
+
     public static class Sector {
 
         public final byte[] data;
@@ -100,6 +119,118 @@ public class MifareCardData extends ISO14443ACardData {
             }
 
             this.data = data;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            Sector sector = (Sector) o;
+
+            return new EqualsBuilder()
+                    .append(data, sector.data)
+                    .isEquals();
+        }
+
+        @Override
+        public int hashCode() {
+            return new HashCodeBuilder(17, 37)
+                    .append(data)
+                    .toHashCode();
+        }
+    }
+
+    public static class Key implements Serializable {
+
+        public final byte[] key;
+
+        public Key(@Size(6) byte[] key) {
+            if (key.length != 6) {
+                throw new IllegalArgumentException("Invalid key length");
+            }
+
+            this.key = key;
+        }
+
+        public static Key fromString(String value) {
+            return new Key(BaseEncoding.base16().decode(value.toUpperCase()));
+        }
+
+        @Override
+        public String toString() {
+            return MiscUtils.bytesToHex(key, false);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            Key key1 = (Key) o;
+
+            return new EqualsBuilder()
+                    .append(key, key1.key)
+                    .isEquals();
+        }
+
+        @Override
+        public int hashCode() {
+            return new HashCodeBuilder(17, 37)
+                    .append(key)
+                    .toHashCode();
+        }
+    }
+
+    public static class SectorNumber implements Serializable, Comparable<SectorNumber> {
+
+        public final int number;
+
+        public SectorNumber(@IntRange(from = 0, to = 39) int number) {
+            if (number < 0 || number > 39) {
+                throw new IllegalArgumentException("Invalid sector number");
+            }
+
+            this.number = number;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            SectorNumber that = (SectorNumber) o;
+
+            return new EqualsBuilder()
+                    .append(number, that.number)
+                    .isEquals();
+        }
+
+        @Override
+        public int hashCode() {
+            return new HashCodeBuilder(17, 37)
+                    .append(number)
+                    .toHashCode();
+        }
+
+        @Override
+        public int compareTo(@NonNull SectorNumber o) {
+            return Integer.valueOf(number).compareTo(o.number);
         }
     }
 }

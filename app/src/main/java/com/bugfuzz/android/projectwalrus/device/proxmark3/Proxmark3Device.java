@@ -19,17 +19,19 @@
 
 package com.bugfuzz.android.projectwalrus.device.proxmark3;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.usb.UsbDevice;
 import android.support.annotation.UiThread;
 import android.support.annotation.WorkerThread;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Pair;
 
 import com.bugfuzz.android.projectwalrus.R;
 import com.bugfuzz.android.projectwalrus.card.carddata.CardData;
 import com.bugfuzz.android.projectwalrus.card.carddata.HIDCardData;
+import com.bugfuzz.android.projectwalrus.card.carddata.MifareCardData;
+import com.bugfuzz.android.projectwalrus.card.carddata.ui.MifareReadSetupDialogFragment;
 import com.bugfuzz.android.projectwalrus.device.CardDevice;
 import com.bugfuzz.android.projectwalrus.device.ReadCardDataOperation;
 import com.bugfuzz.android.projectwalrus.device.UsbCardDevice;
@@ -51,7 +53,7 @@ import java.util.regex.Pattern;
 @CardDevice.Metadata(
         name = "Proxmark3",
         iconId = R.drawable.drawable_proxmark3,
-        supportsRead = {HIDCardData.class},
+        supportsRead = {HIDCardData.class, MifareCardData.class},
         supportsWrite = {HIDCardData.class},
         supportsEmulate = {}
 )
@@ -64,7 +66,7 @@ public class Proxmark3Device extends UsbSerialCardDevice<Proxmark3Command>
         implements CardDevice.Versioned {
 
     private static final long DEFAULT_TIMEOUT = 20 * 1000;
-    private static final Pattern TAG_ID_PATTERN = Pattern.compile("TAG ID: ([0-9a-fA-F]+)");
+    private static final Pattern TAG_ID = Pattern.compile("TAG ID: ([0-9a-fA-F]+)");
 
     private final Semaphore semaphore = new Semaphore(1);
 
@@ -129,17 +131,25 @@ public class Proxmark3Device extends UsbSerialCardDevice<Proxmark3Command>
 
     @Override
     @UiThread
-    public void createReadCardDataOperation(Activity activity,
+    public void createReadCardDataOperation(AppCompatActivity activity,
             Class<? extends CardData> cardDataClass, int callbackId) {
         ensureOperationCreatedCallbackSupported(activity);
 
-        ((OnOperationCreatedCallback) activity).onOperationCreated(new ReadHIDOperation(this),
-                callbackId);
+        if (cardDataClass == HIDCardData.class) {
+            ((OnOperationCreatedCallback) activity).onOperationCreated(new ReadHIDOperation(this),
+                    callbackId);
+        } else if (cardDataClass == MifareCardData.class) {
+            MifareReadSetupDialogFragment.create(callbackId).show(
+                    activity.getSupportFragmentManager(),
+                    "proxmark3_device_mifare_read_setup_dialog");
+        } else {
+            throw new RuntimeException("Invalid card data class");
+        }
     }
 
     @Override
     @UiThread
-    public void createWriteOrEmulateDataOperation(Activity activity, CardData cardData,
+    public void createWriteOrEmulateDataOperation(AppCompatActivity activity, CardData cardData,
             boolean write, int callbackId) {
         ensureOperationCreatedCallbackSupported(activity);
 
@@ -206,9 +216,9 @@ public class Proxmark3Device extends UsbSerialCardDevice<Proxmark3Command>
                     lf, hf,
                     lf ? lfVoltages : null,
                     lf ? (result.args[0] & 0xffff) / 1e3f : null,
-                    lf ? (result.args[0] >> 16) / 1e3f : null,
+                    lf ? (result.args[0] >>> 16) / 1e3f : null,
                     lf ? 12e6f / ((result.args[2] & 0xffff) + 1) : null,
-                    lf ? (result.args[2] >> 16) / 1e3f : null,
+                    lf ? (result.args[2] >>> 16) / 1e3f : null,
                     hf ? (result.args[1] & 0xffff) / 1e3f : null);
         } finally {
             releaseAndSetStatus();
@@ -253,7 +263,7 @@ public class Proxmark3Device extends UsbSerialCardDevice<Proxmark3Command>
                                 return true;
                             }
 
-                            Matcher matcher = TAG_ID_PATTERN.matcher(dataAsString);
+                            Matcher matcher = TAG_ID.matcher(dataAsString);
                             if (matcher.find() && resultSink != null) {
                                 resultSink.onResult(new HIDCardData(new BigInteger(
                                         matcher.group(1), 16)));
