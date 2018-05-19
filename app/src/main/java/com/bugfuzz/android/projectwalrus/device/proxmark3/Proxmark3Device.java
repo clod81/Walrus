@@ -20,16 +20,28 @@
 package com.bugfuzz.android.projectwalrus.device.proxmark3;
 
 import android.app.Activity;
+import android.arch.lifecycle.ViewModel;
+import android.arch.lifecycle.ViewModelProvider;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.usb.UsbDevice;
+import android.support.annotation.NonNull;
 import android.support.annotation.UiThread;
 import android.support.annotation.WorkerThread;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Pair;
+import android.util.TypedValue;
+import android.view.View;
 
+import com.afollestad.materialdialogs.DialogAction;
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.bugfuzz.android.projectwalrus.R;
 import com.bugfuzz.android.projectwalrus.card.carddata.CardData;
 import com.bugfuzz.android.projectwalrus.card.carddata.HIDCardData;
+import com.bugfuzz.android.projectwalrus.card.carddata.MifareCardData;
+import com.bugfuzz.android.projectwalrus.card.carddata.ui.MifareReadSetupDialogFragment;
+import com.bugfuzz.android.projectwalrus.card.carddata.ui.MifareReadSetupViewModel;
 import com.bugfuzz.android.projectwalrus.device.CardDevice;
 import com.bugfuzz.android.projectwalrus.device.ReadCardDataOperation;
 import com.bugfuzz.android.projectwalrus.device.UsbCardDevice;
@@ -51,7 +63,7 @@ import java.util.regex.Pattern;
 @CardDevice.Metadata(
         name = "Proxmark3",
         icon = R.drawable.drawable_proxmark3,
-        supportsRead = {HIDCardData.class},
+        supportsRead = {HIDCardData.class, MifareCardData.class},
         supportsWrite = {HIDCardData.class},
         supportsEmulate = {}
 )
@@ -129,17 +141,25 @@ public class Proxmark3Device extends UsbSerialCardDevice<Proxmark3Command>
 
     @Override
     @UiThread
-    public void createReadCardDataOperation(Activity activity,
+    public void createReadCardDataOperation(AppCompatActivity activity,
             Class<? extends CardData> cardDataClass, int callbackId) {
         ensureOperationCreatedCallbackSupported(activity);
 
-        ((OnOperationCreatedCallback) activity).onOperationCreated(new ReadHIDOperation(this),
-                callbackId);
+        if (cardDataClass == HIDCardData.class) {
+            ((OnOperationCreatedCallback) activity).onOperationCreated(new ReadHIDOperation(this),
+                    callbackId);
+        } else if (cardDataClass == MifareCardData.class) {
+            MifareReadSetupDialogFragment.create(callbackId).show(
+                    activity.getSupportFragmentManager(),
+                    "proxmark3_device_mifare_read_setup_dialog");
+        } else {
+            throw new RuntimeException("Invalid card data class");
+        }
     }
 
     @Override
     @UiThread
-    public void createWriteOrEmulateDataOperation(Activity activity, CardData cardData,
+    public void createWriteOrEmulateDataOperation(AppCompatActivity activity, CardData cardData,
             boolean write, int callbackId) {
         ensureOperationCreatedCallbackSupported(activity);
 

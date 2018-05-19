@@ -26,6 +26,7 @@ import android.hardware.usb.UsbDevice;
 import android.preference.PreferenceManager;
 import android.support.annotation.UiThread;
 import android.support.annotation.WorkerThread;
+import android.support.v7.app.AppCompatActivity;
 
 import com.bugfuzz.android.projectwalrus.R;
 import com.bugfuzz.android.projectwalrus.card.carddata.CardData;
@@ -88,7 +89,7 @@ public class ChameleonMiniDevice extends LineBasedUsbSerialCardDevice
 
     @Override
     @UiThread
-    public void createReadCardDataOperation(Activity activity,
+    public void createReadCardDataOperation(AppCompatActivity activity,
             Class<? extends CardData> cardDataClass, int callbackId) {
         ensureOperationCreatedCallbackSupported(activity);
 
@@ -98,7 +99,7 @@ public class ChameleonMiniDevice extends LineBasedUsbSerialCardDevice
 
     @Override
     @UiThread
-    public void createWriteOrEmulateDataOperation(Activity activity, CardData cardData,
+    public void createWriteOrEmulateDataOperation(AppCompatActivity activity, CardData cardData,
             boolean write, int callbackId) {
         ensureOperationCreatedCallbackSupported(activity);
 

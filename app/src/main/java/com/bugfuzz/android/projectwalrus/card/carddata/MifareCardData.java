@@ -20,6 +20,7 @@
 package com.bugfuzz.android.projectwalrus.card.carddata;
 
 import android.support.annotation.IntRange;
+import android.support.annotation.Nullable;
 import android.support.annotation.Size;
 
 import com.bugfuzz.android.projectwalrus.R;
@@ -90,6 +91,15 @@ public class MifareCardData extends ISO14443ACardData {
                 .toHashCode();
     }
 
+    public enum KeySlot {
+        A,
+        B
+    }
+
+    public interface KeyAttempt {
+        // TODO: this?
+    }
+
     public static class Sector {
 
         public final byte[] data;
@@ -100,6 +110,31 @@ public class MifareCardData extends ISO14443ACardData {
             }
 
             this.data = data;
+        }
+    }
+
+    public static class Key {
+
+        public final byte[] key;
+
+        public Key(@Size(6) byte[] key) {
+            if (key.length != 6) {
+                throw new IllegalArgumentException("Invalid key length");
+            }
+
+            this.key = key;
+        }
+    }
+
+    public static class StaticKeyAttempt implements KeyAttempt {
+
+        public final Key key;
+        @Nullable
+        public final KeySlot slot;
+
+        public StaticKeyAttempt(Key key, @Nullable KeySlot slot) {
+            this.key = key;
+            this.slot = slot;
         }
     }
 }

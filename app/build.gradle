@@ -35,6 +35,9 @@ android {
         resValue "string", "google_maps_key",
                 (project.findProperty("GOOGLE_MAPS_API_KEY") ?: "")
     }
+    dataBinding {
+        enabled = true
+    }
     if (new File("../walrus-keystore.properties").exists()) {
         def keystorePropertiesFile = rootProject.file("../walrus-keystore.properties")
         def keystoreProperties = new Properties()
